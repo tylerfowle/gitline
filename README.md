@@ -1,2 +1,2 @@
 # gitline
-cli for interacting with github api
+cli for github api v3
