@@ -312,9 +312,9 @@ function userSelectFile() {
 # help | documention
 ############################################################
 
-function help() {
-  specificCommand=$2;
-  case $specificCommand in
+function helpCommand() {
+  specificCommand=$1;
+  case $1 in
     ###########################################################
     addLabel )
       echo '
@@ -569,7 +569,9 @@ case $whichMethod in
   st             ) status ;;
   loop           ) assignee_or_label=$2; loop ;;
   ac             ) ac ;;
-  help           ) specificCommand=$2; help ;;
+  help           )
+    helpCommand $2;
+    ;;
   -*             ) ;;
   config         )
     setToken=$2
@@ -593,10 +595,9 @@ esac
 ########################################################################################################################
 # fancy config with -short --long options
 ########################################################################################################################
-while getopts h::-: arg; do
+while getopts :-: arg; do
   case $arg in
     # c )  ARG_C=$OPTARG; echo '-c was selected' $OPTARG ;;
-    h ) help $OPTARG $OPTARG ;;
     - ) LONG_OPTARG="${OPTARG#*=}"
         case $OPTARG in
           username=?* )
