@@ -1,33 +1,5 @@
 #!/bin/bash
 # gitline - github api script
-
-############################################################
-# How To Use
-############################################################
-
-# add gitline_config.sh to:
-# ~/gitline_config.sh
-
-# this file containes 2 variables
-# ----------------------------------------------------------
-# TOKEN - your github security token
-# GHUSER - your username on github
-# ----------------------------------------------------------
-
-
-# add the following aliases to your .bash_profile
-# ----------------------------------------------------------
-# alias gitline='/usr/local/bin/gitline.sh'
-# alias gl='/usr/local/bin/gitline.sh'
-# ----------------------------------------------------------
-
-
-# in terminal:
-# ----------------------------------------------------------
-# gitline command args
-# note: each command has notes on what arguments it takes
-# ----------------------------------------------------------
-
 ############################################################
 
 VERSION=0.1.0
@@ -42,7 +14,8 @@ CONFIG_FILE=~/gitline_config.sh
 CONFIG_FILE_BAK=~/gitline_config.sh.bak
 
 # holds array
-TEMP_FILE=~/gitline_temp.txt
+QA_FILE=~/gitline_qas.txt
+MILESTONES_FILE=~/gitline_milestones.txt
 
 # variables
 whichMethod=$1
@@ -56,12 +29,11 @@ if [ -f $CONFIG_FILE ]; then
   source $CONFIG_FILE
 else
   echo '
-  ERROR: missing config.
-  to create config run "gitline config :token :github_username"
+  ERROR: missing config file. creating new file.
+  run "gitline config :token :github_username"
   '
   # create files
   echo '# gitline config' >> $CONFIG_FILE
-  echo '' >> $TEMP_FILE
   exit
 fi
 
@@ -101,6 +73,12 @@ function config() {
     echo 'added github [qa person username] to config'
   fi
 }
+
+
+
+
+
+
 
 # usage
 # listAssignees
@@ -161,10 +139,20 @@ function addComment() {
 
 ############################################################
 
+# usage
+# addMilestone [issueNumber] [milestone id]
+# add specific issue to a milestone
+function addMilestone() {
+  addMilestone=$(curl --silent -u ${TOKEN}:x-oauth-basic ${DOMAIN}/repos/${OWNER}/${REPO}/issues/${issueNumber} -X PATCH -H "Content-Type: application/json" --data '{ "milestone":'${assignee_or_label}'}')
+  echo "$addMilestone"
+}
+
+############################################################
+
 # send issue to QA
 # usage
-# toQA [issueNumber]
-function toQA() {
+# sendQA [issueNumber]
+function sendQA() {
   assignee_or_label="InReview"
   addLabel
   assignee_or_label="InProgress"
@@ -178,8 +166,8 @@ function toQA() {
 
 # add label InProgress to issue
 # usage
-# toInProgress [issueNumber]
-function toInProgress() {
+# sendProgress [issueNumber]
+function sendProgress() {
   assignee_or_label="InProgress"
   addLabel
 }
@@ -195,237 +183,341 @@ function toInProgress() {
 function ac() {
   echo ${assignee_or_label}
   git add -A && git commit -m "${assignee_or_label} #${issueNumber}"
-  toInProgress
-  addArray
+  selectedFile=$QA_FILE
+  sendProgress
+  arrayAdd
 }
 
 ############################################################
 
 # add issue number to an array
-function addArray() {
-  echo "add single issue to array"
-  echo "${issueNumber}" >> $TEMP_FILE
-  status
+function arrayAdd() {
+  userSelectFile
+  if [ -f $selectedFile ]; then
+    echo ''
+  else
+    echo '' >> $selectedFile
+  fi
+  echo "${issueNumber}" >> $selectedFile
 }
 # remove issue number from temp file
-function removeArray() {
-  echo "remove single issue from array"
-  sed -i '' 's/'${issueNumber}'//g' $TEMP_FILE
+function arrayRemove() {
+  userSelectFile
+  sed -i '' 's/'${issueNumber}'//g' $selectedFile
   status
 }
 # clear that array
-function clearArray() {
-  > $TEMP_FILE
-  echo $issueNumber
+function arrayClear() {
+  userSelectFile
+  > $selectedFile
+  cat $selectedFile
 }
 
 # echo issue numbers in temp file
 function status() {
-  cat $TEMP_FILE
+  userSelectFile
+  echo '##########'
+  cat $selectedFile;
+  echo '##########'
 }
 
-# loop through each issue number in the array and send it [toQA]
-function loopQA() {
+# loop through each issue number in the array and send it [sendQA]
+# no args
+# usage:
+# gitline loop
+function loop() {
+  userSelectFile
   while read p; do
     echo $p
     issueNumber=$p
-    toQA
-  done <$TEMP_FILE
-  clearArray
+    if [[ $selectedFile == $QA_FILE ]]; then
+      sendQA
+    elif [[ $selectedFile == $MILESTONES_FILE ]]; then
+      addMilestone
+    fi
+  done <$selectedFile
+  arrayClear
+}
+############################################################
+
+
+
+
+
+
+
+
+########################################################################################################################
+########################################################################################################################
+# prompt user to pick a file
+##################################################################
+
+function userSelectFile() {
+
+  if [ $selectedFile ]; then
+    echo " "
+  else
+    echo "Select which file you want to use"
+    echo '#################################'
+    select option in "qa" "milestones";
+    do
+      case $option in
+        "qa")
+          selectedFile=$QA_FILE
+          break;;
+        "milestones")
+          selectedFile=$MILESTONES_FILE
+          break;;
+        *) echo invalid option;;
+      esac
+    done
+    echo '#################################'
+  fi
 }
 
-############################################################
+########################################################################################################################
 
 
 
 ########################################################################################################################
 ########################################################################################################################
-
-############################################################
 # help | documention
 ############################################################
 
-function help() {
+function helpCommand() {
+  specificCommand=$1;
+  case $1 in
+    ###########################################################
+    addLabel )
+      echo '
+      Description:
+        -add a single label to a specific issue number
 
-############################################################
-if [ "$specificCommand" == "addLabel" ]; then
-  echo '
-  Description:
-    -add a single label to a specific issue number
+      Usage:
+        gitline addLabel [Issue Number] [Label to add]
+      '
+    ;;
+    ############################################################
+    removeLabel )
+      echo '
+      Description:
+        -remove a single label from a specific issue number
 
-  Usage:
-    gitline addLabel [Issue Number] [Label to remove]
-  '
-############################################################
-elif [ "$specificCommand" == "removeLabel" ]; then
-  echo '
-  Description:
-    -remove a single label from a specific issue number
+      Usage:
+        gitline removeLabel [Issue Number] [Label to remove]
+      '
+    ;;
+    ############################################################
+    addAssignee )
+      echo '
+      Description:
+        -add an assignee to a specific issue number
 
-  Usage:
-    gitline removeLabel [Issue Number] [Label to remove]
-  '
-############################################################
-elif [ "$specificCommand" == "addAssignee" ]; then
-  echo '
-  Description:
-    -add an assignee to a specific issue number
+      Usage:
+        gitline addAssignee [Issue Number] [Assignee to add]
+      '
+    ;;
+    ############################################################
+    removeAssignee )
+      echo '
+      Description:
+        -remove an assignee from a specific issue number
 
-  Usage:
-    gitline addAssignee [Issue Number] [Assignee to add]
-  '
-############################################################
-elif [ "$specificCommand" == "removeAssignee" ]; then
-  echo '
-  Description:
-    -remove an assignee from a specific issue number
+      Usage:
+        gitline removeAssignee [Issue Number] [Assignee to remove]
+      '
+    ;;
+    ############################################################
+    listAssignees )
+      echo '
+      Description:
+        -list all assignees availble to assigne in this repo
 
-  Usage:
-    gitline removeAssignee [Issue Number] [Assignee to remove]
-  '
-############################################################
-elif [ "$specificCommand" == "listAssignees" ]; then
-  echo '
-  Description:
-    -list all assignees availble to assigne in this repo
+      Usage:
+        gitline listAssignees
+      '
+    ;;
+    ############################################################
+    listLabels )
+      echo '
+      Description:
+        -list all labels currently applied to a specific issue number
 
-  Usage:
-    gitline listAssignees
-  '
-############################################################
-elif [ "$specificCommand" == "listLabels" ]; then
-  echo '
-  Description:
-    -list all labels currently applied to a specific issue number
+      Usage:
+        gitline listLabels [Issue Number]
+      '
+    ;;
+    ############################################################
+    addComment )
+      echo '
+      Description:
+        -add a comment to a specific issue number
 
-  Usage:
-    gitline listLabels [Issue Number]
-  '
-############################################################
-elif [ "$specificCommand" == "addComment" ]; then
-  echo '
-  Description:
-    -add a comment to a specific issue number
+      Usage:
+        gitline addComment [Issue Number] ["Comment in quotes"]
+      '
+    ;;
+    ############################################################
+    addMilestone )
+      echo '
+      Description:
+        -add a milestone to a specific issue number
 
-  Usage:
-    gitline addComment [Issue Number] ["Comment in quotes"]
-  '
-############################################################
-elif [ "$specificCommand" == "toQA" ]; then
-  echo '
-  Description:
-    -send a specific issue number to QA. this includes:
-      removing "InProgress" label
-      adding "InReview" label
-      removing self as assignee
-      adding qa user as assignee
+      Usage:
+        gitline addComment [Issue Number] [Milestone ID]
+      '
+    ;;
+    ############################################################
+    sendQA )
+      echo '
+      Description:
+        -send a specific issue number to QA. this includes:
+          removing "InProgress" label
+          adding "InReview" label
+          removing self as assignee
+          adding qa user as assignee
 
-  Usage:
-    gitline toQA [Issue Number]
-  '
-############################################################
-elif [ "$specificCommand" == "toInProgress" ]; then
-  echo '
-  Description:
-    -add "InProgress" label to a specific issue number
+      Usage:
+        gitline sendQA [Issue Number]
+      '
+    ;;
+    ############################################################
+    sendProgress )
+      echo '
+      Description:
+        -add "InProgress" label to a specific issue number
 
-  Usage:
-    gitline toInProgress [Issue Number]
-  '
-############################################################
-elif [ "$specificCommand" == "addArray" ]; then
-  echo '
-  Description:
-    -add issue number to array for using later in loopQA
+      Usage:
+        gitline sendProgress [Issue Number]
+      '
+    ;;
+    ############################################################
+    arrayAdd )
+      echo '
+      Description:
+        -add issue number to array for using later in loop
 
-  Usage:
-    gitline addArray [Issue Number]
-  '
-############################################################
-elif [ "$specificCommand" == "removeArray" ]; then
-  echo '
-  Description:
-    -remove issue number from array for using later in loopQA
+      Usage:
+        gitline arrayAdd [Issue Number]
+      '
+    ;;
+    ############################################################
+    arrayRemove )
+      echo '
+      Description:
+        -remove issue number from array for using later in loop
 
-  Usage:
-    gitline removeArray [Issue Number]
-  '
-############################################################
-elif [ "$specificCommand" == "status" ]; then
-  echo '
-  Description:
-    -print all issue numbers currently in array
+      Usage:
+        gitline arrayRemove [Issue Number]
+      '
+    ;;
+    ############################################################
+    status )
+      echo '
+      Description:
+        -print all issue numbers currently in array
 
-  Usage:
-    gitline status
-  '
-############################################################
-elif [ "$specificCommand" == "clearArray" ]; then
-  echo '
-  Description:
-    -remove all issues from array
+      Usage:
+        gitline status
+      '
+    ;;
+    ############################################################
+    arrayClear )
+      echo '
+      Description:
+        -remove all issues from array
 
-  Usage:
-    gitline clearArray
-  '
-############################################################
-elif [ "$specificCommand" == "loopQA" ]; then
-  echo '
-  Description:
-    -loop through issue number array and send "toQA"
-      run "gitline help toQA" for more information
+      Usage:
+        gitline arrayClear
+      '
+    ;;
+    ############################################################
+    loop )
+      echo '
+      Description:
+        -loop through issue number array and do either: sendQA or addMilestone
+          run "gitline help sendQA" for more information
+          run "gitline help addMilestone" for more information
 
-  Usage:
-    gitline loopQA
-  '
-############################################################
-elif [ "$specificCommand" == "ac" ]; then
-  echo '
-  Description:
-    -add and commit a message to git appended with an issue number.
-    -send specific issue number "toInProgress"
-      run "gitline help toInProgress" for more information
+      Usage:
+        gitline loop
+      '
+    ;;
+    ############################################################
+    ac )
+      echo '
+      Description:
+        -add and commit a message to git appended with an issue number.
+        -add "InProgress" label to issue
+        -add issue number to array for use later in loop.
+          run "gitline help sendProgress" for more information
 
-  Usage:
-    gitline ac [Issue Number] ["Comment to commit on github in quotes"]
-  '
-############################################################
-elif [ "$specificCommand" == "config" ]; then
-  echo '
-  Description:
-    -add config settings to config file
+      Usage:
+        gitline ac [Issue Number] ["Comment to commit on github in quotes"]
+      '
+    ;;
+    ############################################################
+    help )
+      echo '
+      Description:
+        -learn more about gitline, optional: add a [specific command]
 
-  Usage:
-    gitline config [token] [owner] [repo] [github username] [qa username]
-  '
-############################################################
+      Usage:
+        gitline -h
+        gitline -h [specificCommand]
+        gitline help
+        gitline help [specific command]
+      '
+    ;;
+    ############################################################
+    config )
+      echo '
+      Description:
+        -add config settings to config file
+
+      There are two methods for setting config options.
+      --------------------------------------------------------------------------------------------------
+      Basic - this requires parameters to be in the specific order. to add a new [repo] you
+      would have to also specify all previous parameters in the correct order.
+      Usage:
+        gitline config [token] [owner] [repo] [github username] [qa username]
+      --------------------------------------------------------------------------------------------------
+      Advanced - this method can take any number of parameters in an order.
+      Usage:
+        gitline --token=[token] --owner=[owner] --repo=[repo] --username=[your username] --qausername[qa username]
+      --------------------------------------------------------------------------------------------------
+      '
+    ;;
+    ############################################################
 
 
-############################################################
-else
-  echo '
-  Commands:
-    help
-    config
-    addLabel
-    removeLabel
-    addAssignee
-    removeAssignee
-    listAssignees
-    listLabels
-    addComment
-    toQA
-    toInProgress
-    addArray
-    removeArray
-    status
-    clearArray
-    loopQA
-    ac
+    ############################################################
+    * )
+      echo '
+      Commands:
+        help
+        config
+        addLabel
+        removeLabel
+        addAssignee
+        removeAssignee
+        listAssignees
+        listLabels
+        addComment
+        addMilestone
+        sendQA
+        sendProgress
+        arrayAdd
+        arrayRemove
+        status
+        arrayClear
+        loop
+        ac
 
-  Run "gitline help [command]" for specific usage
-  '
-fi
+      Run "gitline help [command]" for specific usage
+      '
+    ;;
+  esac
 }
 
 ########################################################################################################################
@@ -433,54 +525,95 @@ fi
 
 
 # Determining Which Method To Call Based On Command Line Arguments
-if [ $whichMethod == "addLabel" ]
-  then addLabel
-elif [ $whichMethod == "removeLabel" ]
-  then removeLabel
-elif [ $whichMethod == "addAssignee" ]
-  then addAssignee
-elif [ $whichMethod == "removeAssignee" ]
-  then removeAssignee
-elif [ $whichMethod == "listAssignees" ]
-  then listAssignees
-elif [ $whichMethod == "listLabels" ]
-  then listLabels
-elif [ $whichMethod == "addComment" ]
-  then addComment
-elif [ $whichMethod == "toQA" ]
-  then toQA
-elif [ $whichMethod == "toInProgress" ]
-  then toInProgress
-elif [ $whichMethod == "addArray" ]
-  then addArray
-elif [ $whichMethod == "removeArray" ]
-  then removeArray
-elif [ $whichMethod == "status" ]
-  then status
-elif [ $whichMethod == "st" ]
-  then status
-elif [ $whichMethod == "clearArray" ]
-  then clearArray
-elif [ $whichMethod == "loopQA" ]
-  then loopQA
-elif [ $whichMethod == "ac" ]
-  then ac
-elif [ $whichMethod == "help" ]
-  then
-  specificCommand=$2
-  help
-elif [ $whichMethod == "config" ]
-  then
-  setToken=$2
-  setOwner=$3
-  setRepo=$4
-  setGH_Username=$5
-  setQA_Username=$6
-  config
-else
-  echo '
-  ERROR: invalid command
-  run "gitline help" for a list of available commands.
-  '
-fi
+case $whichMethod in
+  addLabel       ) addLabel ;;
+  addAssignee    ) addAssignee ;;
+  addcomment     ) addcomment ;;
+  addMilestone   ) addMilestone ;;
+  removeLabel    ) removeLabel ;;
+  removeAssignee ) removeAssignee ;;
+  sendQA         ) sendQA ;;
+  sendProgress   ) sendProgress ;;
+  listAssignees  ) listAssignees ;;
+  listLabels     ) listLabels ;;
+  arrayAdd       ) arrayAdd ;;
+  arrayRemove    ) arrayRemove ;;
+  arrayClear     ) arrayClear ;;
+  status         ) status ;;
+  st             ) status ;;
+  loop           ) assignee_or_label=$2; loop ;;
+  ac             ) ac ;;
+  help           )
+    helpCommand $2;
+    ;;
+  -*             ) ;;
+  config         )
+    setToken=$2
+    setOwner=$3
+    setRepo=$4
+    setGH_Username=$5
+    setQA_Username=$6;
+    config
+  ;;
+  * )
+    echo '
+    ERROR: invalid command
+    run "gitline help" for a list of available commands.
+    '
+   ;;
+esac
+
+
+
+
+########################################################################################################################
+# fancy config with -short --long options
+########################################################################################################################
+while getopts :-: arg; do
+  case $arg in
+    # c )  ARG_C=$OPTARG; echo '-c was selected' $OPTARG ;;
+    - ) LONG_OPTARG="${OPTARG#*=}"
+        case $OPTARG in
+          username=?* )
+            echo 'GHUSER='${LONG_OPTARG} >> $CONFIG_FILE;
+            echo 'added github [your username] to config';
+            ;;
+          token=?* )
+            echo 'TOKEN='${LONG_OPTARG} >> $CONFIG_FILE;
+            echo 'added [token] to config';
+            ;;
+          owner=?* )
+            echo 'OWNER='${LONG_OPTARG} >> $CONFIG_FILE;
+            echo 'added github [organization or owner] to config';
+            ;;
+          repo=?* )
+            echo 'REPO='${LONG_OPTARG} >> $CONFIG_FILE;
+            echo 'added github [repo] to config';
+            ;;
+          qausername=?* )
+            echo 'QAUSER='${LONG_OPTARG} >> $CONFIG_FILE;
+            echo 'added github [qa person username] to config';
+            ;;
+
+          username*   ) echo "No arg allowed for --OPTARG options"; exit 2;;
+          token*      ) echo "No arg allowed for --OPTARG options"; exit 2;;
+          owner*      ) echo "No arg allowed for --OPTARG options"; exit 2;;
+          repo*       ) echo "No arg allowed for --OPTARG options"; exit 2;;
+          qausername* ) echo "No arg allowed for --OPTARG options"; exit 2;;
+
+           # bravo=?* )  ARG_B="$LONG_OPTARG"; echo '--bravo was selected' ;;
+           # bravo*   )  echo "No arg for --$OPTARG option" exit 2 ;;
+           # charlie  )  ARG_C=true; echo '--charlie was selected' ;;
+           # alpha* | charlie* )
+           #             echo "No arg allowed for --$OPTARG option"; exit 2 ;;
+           '' )        break ;; # "--" terminates argument processing
+           * )         echo "Illegal option --$OPTARG"; exit 2 ;;
+         esac ;;
+    \? ) exit 2 ;;  # getopts already reported the illegal option
+  esac
+done
+shift $((OPTIND-1)) # remove parsed options and args from $@ list
+########################################################################################################################
+
+
 
