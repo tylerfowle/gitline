@@ -15,9 +15,7 @@
 
 `sudo chmod 755 '/usr/local/bin/gitline.sh'`
 
-##### optional:
-
-###### add aliases:
+#### add aliases:
 `alias gitline='/usr/local/bin/gitline.sh'`
 
 `alias gl='/usr/local/bin/gitline.sh'`
