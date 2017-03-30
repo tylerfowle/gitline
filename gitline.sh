@@ -253,26 +253,27 @@ function loop() {
 ##################################################################
 
 function userSelectFile() {
+  selectedFile=$QA_FILE
 
-  if [ $selectedFile ]; then
-    echo " "
-  else
-    echo "Select which file you want to use"
-    echo '#################################'
-    select option in "qa" "milestones";
-    do
-      case $option in
-        "qa")
-          selectedFile=$QA_FILE
-          break;;
-        "milestones")
-          selectedFile=$MILESTONES_FILE
-          break;;
-        *) echo invalid option;;
-      esac
-    done
-    echo '#################################'
-  fi
+  # if [ $selectedFile ]; then
+  #   echo " "
+  # else
+  #   echo "Select which file you want to use"
+  #   echo '#################################'
+  #   select option in "qa" "milestones";
+  #   do
+  #     case $option in
+  #       "qa")
+  #         selectedFile=$QA_FILE
+  #         break;;
+  #       "milestones")
+  #         selectedFile=$MILESTONES_FILE
+  #         break;;
+  #       *) echo invalid option;;
+  #     esac
+  #   done
+  #   echo '#################################'
+  # fi
 }
 
 ########################################################################################################################
@@ -614,6 +615,3 @@ while getopts :-: arg; do
 done
 shift $((OPTIND-1)) # remove parsed options and args from $@ list
 ########################################################################################################################
-
-
-
