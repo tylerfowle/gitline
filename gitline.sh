@@ -75,9 +75,13 @@ function config() {
 }
 
 
-
-
-
+# usage
+# checkAssignee
+# This will get the current assignee
+function checkAssignee() {
+  checkAssignee=$(curl --silent -u ${TOKEN}:x-oauth-basic ${DOMAIN}/repos/${OWNER}/${REPO}/assignees:assignee)
+  echo "$checkAssignee"
+}
 
 
 # usage
@@ -531,6 +535,9 @@ case $whichMethod in
   addAssignee    ) addAssignee ;;
   addcomment     ) addcomment ;;
   addMilestone   ) addMilestone ;;
+
+  checkAssignee  ) checkAssignee;;
+
   removeLabel    ) removeLabel ;;
   removeAssignee ) removeAssignee ;;
   sendQA         ) sendQA ;;
