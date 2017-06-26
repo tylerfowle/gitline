@@ -542,7 +542,7 @@ case $whichMethod in
   gc             ) getCreator ;;
   addLabel       ) addLabel ;;
   addAssignee    ) addAssignee ;;
-  addcomment     ) addcomment ;;
+  addComment     ) addComment ;;
   addMilestone   ) addMilestone ;;
   removeLabel    ) removeLabel ;;
   removeAssignee ) removeAssignee ;;
