@@ -314,6 +314,16 @@ function helpCommand() {
   specificCommand=$1;
   case $1 in
     ###########################################################
+    getCreator )
+    echo '
+    Description:
+    -get the creator of an issue
+
+    Usage:
+    gitline getCreator [Issue Number]
+    '
+    ;;
+    ###########################################################
     addLabel )
     echo '
     Description:
@@ -371,6 +381,16 @@ function helpCommand() {
 
     Usage:
     gitline listLabels [Issue Number]
+    '
+    ;;
+    ############################################################
+    listAllLabels )
+    echo '
+    Description:
+    -list all labels currently available in repo
+
+    Usage:
+    gitline listAllLabels
     '
     ;;
     ############################################################
@@ -523,12 +543,14 @@ function helpCommand() {
     Commands:
     help
     config
+    getCreator
     addLabel
     removeLabel
     addAssignee
     removeAssignee
     listAssignees
     listLabels
+    listAllLabels
     addComment
     addMilestone
     sendQA
@@ -552,7 +574,7 @@ esac
 
 # Determining Which Method To Call Based On Command Line Arguments
 case $whichMethod in
-  gc             ) getCreator ;;
+  getCreator     ) getCreator ;;
   addLabel       ) addLabel ;;
   addAssignee    ) addAssignee ;;
   addComment     ) addComment ;;
