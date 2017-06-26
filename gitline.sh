@@ -107,8 +107,15 @@ function getCreator() {
     getCreator=$(curl --silent -u ${TOKEN}:x-oauth-basic ${DOMAIN}/repos/${OWNER}/${REPO}/issues/${issueNumber} )
     creatorUsername=$(echo "$getCreator" | jq .user.login)
     echo "$creatorUsername"
+
+    creatorUsername="${creatorUsername%\"}"
+    creatorUsername="${creatorUsername#\"}"
+
+    QAUSER=$creatorUsername
+
+    echo "$QAUSER"
     # set qa github username
-    echo "QAUSER=$creatorUsername" >> $CONFIG_FILE
+    # echo "QAUSER=$creatorUsername" >> $CONFIG_FILE
 
   else
     echo "jq not installed. some functionality may be limited."
