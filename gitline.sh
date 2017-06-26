@@ -22,6 +22,8 @@ whichMethod=$1
 issueNumber=$2
 assignee_or_label=$3
 
+jq_is_available=false
+
 ############################################################
 
 # check to see if config file exists
@@ -36,6 +38,14 @@ else
   echo '# gitline config' >> $CONFIG_FILE
   exit
 fi
+
+# test if jq is available
+if ! [ -x "$(command -v jq)" ]; then
+  jq_is_available=false
+else
+  jq_is_available=true
+fi
+
 
 # set configurations
 # usage:
@@ -76,17 +86,34 @@ function config() {
 
 
 
+function echoFormattedJSON() {
+  if [ "$jq_is_available" = true ]; then
+    echo $1 | jq .
+  else
+    echo $1
+  fi
+}
+
+
+
 
 # usage
 # getCreator
 # This call lists all the available assignees to which issues may be assigned. (repo)
 function getCreator() {
-  getCreator=$(curl --silent -u ${TOKEN}:x-oauth-basic ${DOMAIN}/repos/${OWNER}/${REPO}/issues/${issueNumber} )
-  creatorUsername=$(echo "$getCreator" | jq .user.login)
-  echo "$creatorUsername"
 
-  # set qa github username
-  echo "QAUSER=$creatorUsername" >> $CONFIG_FILE
+  if [ "$jq_is_available" = true ]; then
+
+    getCreator=$(curl --silent -u ${TOKEN}:x-oauth-basic ${DOMAIN}/repos/${OWNER}/${REPO}/issues/${issueNumber} )
+    creatorUsername=$(echo "$getCreator" | jq .user.login)
+    echo "$creatorUsername"
+    # set qa github username
+    echo "QAUSER=$creatorUsername" >> $CONFIG_FILE
+
+  else
+    echo "jq not installed. some functionality may be limited."
+  fi
+
 }
 
 
@@ -95,15 +122,16 @@ function getCreator() {
 # This call lists all the available assignees to which issues may be assigned. (repo)
 function listAssignees() {
   listAssignees=$(curl --silent -u ${TOKEN}:x-oauth-basic ${DOMAIN}/repos/${OWNER}/${REPO}/assignees)
-  echo "$listAssignees"
+  echoFormattedJSON "$listAssignees"
 }
 # usage
 # listLables [issueNumber]
 # List labels on an issue
 function listLabels() {
   listLabels=$(curl --silent -u ${TOKEN}:x-oauth-basic ${DOMAIN}/repos/${OWNER}/${REPO}/issues/${issueNumber}/labels)
-  echo "$listLabels"
+  echoFormattedJSON "$listLabels"
 }
+
 
 ############################################################
 
@@ -113,12 +141,12 @@ function listLabels() {
 # add a single assignee to an issue
 function addAssignee() {
   addAssignee=$(curl --silent -u ${TOKEN}:x-oauth-basic ${DOMAIN}/repos/${OWNER}/${REPO}/issues/${issueNumber}/assignees -X POST -H "Content-Type: application/json" --data '{ "assignees":["'${assignee_or_label}'"]}')
-  echo "$addAssignee"
+  echoFormattedJSON "$addAssignee"
 }
 # remove a single assignee to an issue
 function removeAssignee() {
   removeAssignee=$(curl --silent -u ${TOKEN}:x-oauth-basic ${DOMAIN}/repos/${OWNER}/${REPO}/issues/${issueNumber}/assignees -X DELETE -H "Content-Type: application/json" --data '{ "assignees":["'${assignee_or_label}'"]}')
-  echo "$removeAssignee"
+  echoFormattedJSON "$removeAssignee"
 }
 
 ############################################################
@@ -129,12 +157,12 @@ function removeAssignee() {
 # add a label to an issue
 function addLabel() {
   addLabel=$(curl --silent -u ${TOKEN}:x-oauth-basic ${DOMAIN}/repos/${OWNER}/${REPO}/issues/${issueNumber}/labels -X POST -H "Content-Type: application/json" --data '["'${assignee_or_label}'"]')
-  echo "$addLabel"
+  echoFormattedJSON "$addLabel"
 }
 # remove a label from an issue
 function removeLabel() {
   removeLabel=$(curl --silent -u ${TOKEN}:x-oauth-basic ${DOMAIN}/repos/${OWNER}/${REPO}/issues/${issueNumber}/labels/${assignee_or_label} -X DELETE)
-  echo "$removeLabel"
+  echoFormattedJSON "$removeLabel"
 }
 
 ############################################################
@@ -144,7 +172,7 @@ function removeLabel() {
 # add a comment to an issue
 function addComment() {
   addComment=$(curl --silent -u ${TOKEN}:x-oauth-basic ${DOMAIN}/repos/${OWNER}/${REPO}/issues/${issueNumber}/comments -X POST -H "Content-Type: application/json" --data '{ "body":"'"$assignee_or_label"'"}')
-  echo "$addComment"
+  echoFormattedJSON "$addComment"
 }
 
 ############################################################
@@ -154,7 +182,7 @@ function addComment() {
 # add specific issue to a milestone
 function addMilestone() {
   addMilestone=$(curl --silent -u ${TOKEN}:x-oauth-basic ${DOMAIN}/repos/${OWNER}/${REPO}/issues/${issueNumber} -X PATCH -H "Content-Type: application/json" --data '{ "milestone":'${assignee_or_label}'}')
-  echo "$addMilestone"
+  echoFormattedJSON "$addMilestone"
 }
 
 ############################################################
@@ -179,6 +207,8 @@ function sendQA() {
 # usage
 # sendProgress [issueNumber]
 function sendProgress() {
+  assignee_or_label="InReview"
+  removeLabel
   assignee_or_label="InProgress"
   addLabel
 }
@@ -252,42 +282,6 @@ function loop() {
 ############################################################
 
 
-
-
-
-
-
-
-########################################################################################################################
-########################################################################################################################
-# prompt user to pick a file
-##################################################################
-
-function userSelectFile() {
-  selectedFile=$QA_FILE
-
-  # if [ $selectedFile ]; then
-  #   echo " "
-  # else
-  #   echo "Select which file you want to use"
-  #   echo '#################################'
-  #   select option in "qa" "milestones";
-  #   do
-  #     case $option in
-  #       "qa")
-  #         selectedFile=$QA_FILE
-  #         break;;
-#       "milestones")
-  #         selectedFile=$MILESTONES_FILE
-  #         break;;
-#       *) echo invalid option;;
-#     esac
-#   done
-#   echo '#################################'
-# fi
-}
-
-########################################################################################################################
 
 
 
