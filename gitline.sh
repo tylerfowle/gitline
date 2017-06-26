@@ -138,6 +138,16 @@ function listLabels() {
   listLabels=$(curl --silent -u ${TOKEN}:x-oauth-basic ${DOMAIN}/repos/${OWNER}/${REPO}/issues/${issueNumber}/labels)
   echoFormattedJSON "$listLabels"
 }
+# usage
+# listAllLabels
+# List labels on an issue
+function listAllLabels() {
+  listAllLabels=$(curl --silent -u ${TOKEN}:x-oauth-basic ${DOMAIN}/repos/${OWNER}/${REPO}/labels)
+  listAllLabels=$(echo "$listAllLabels" | jq '.[].name' )
+
+  echo ">> All available labels in repo $REPO"
+  echoFormattedJSON "$listAllLabels"
+}
 
 
 ############################################################
@@ -264,9 +274,9 @@ function arrayClear() {
 # echo issue numbers in temp file
 function status() {
   userSelectFile
-  echo '##########'
+  echo '>> Issues currently stored'
   cat $selectedFile;
-  echo '##########'
+  echo '>> ##########'
 }
 
 # loop through each issue number in the array and send it [sendQA]
@@ -289,6 +299,9 @@ function loop() {
 ############################################################
 
 
+function userSelectFile() {
+  selectedFile=$QA_FILE
+}
 
 
 
@@ -550,6 +563,7 @@ case $whichMethod in
   sendProgress   ) sendProgress ;;
   listAssignees  ) listAssignees ;;
   listLabels     ) listLabels ;;
+  listAllLabels  ) listAllLabels ;;
   arrayAdd       ) arrayAdd ;;
   arrayRemove    ) arrayRemove ;;
   arrayClear     ) arrayClear ;;
