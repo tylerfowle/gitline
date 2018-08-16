@@ -163,6 +163,15 @@ function removeAssignee() {
   echoFormattedJSON "$removeAssignee"
 }
 
+
+function downloadFile() {
+  FILE="https://api.github.com/repos/$OWNER/$customrepo/contents/$filepath"
+  curl -u ${TOKEN}:x-oauth-basic\
+    --header 'Accept: application/vnd.github.v3.raw' \
+    --remote-name \
+    --location $FILE
+}
+
 ############################################################
 
 # usage
@@ -590,6 +599,7 @@ case $whichMethod in
   st             ) status ;;
   loop           ) assignee_or_label=$2; loop ;;
   ac             ) ac ;;
+  download       ) customrepo=$2; filepath=$3; downloadFile ;;
   help           )
     helpCommand $2;
     ;;
