@@ -2,7 +2,7 @@
 # gitline - github api script
 ############################################################
 
-VERSION=0.1.0
+VERSION=0.2.0
 SUBJECT=gitline
 USAGE="gitline command issueNumber assignee_or_Label"
 
