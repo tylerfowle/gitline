@@ -2,7 +2,8 @@
 # gitline - github api script
 ############################################################
 
-VERSION=0.2.0
+progName=Gitline
+progVersion=0.2.0
 SUBJECT=gitline
 USAGE="gitline command issueNumber assignee_or_Label"
 
@@ -630,10 +631,13 @@ case $whichMethod in
     config
     ;;
   * )
+    echo ""
+    echo "$progName $progVersion"
     echo '
     ERROR: invalid command
     run "gitline help" for a list of available commands.
     '
+    echo ""
     ;;
 esac
 
